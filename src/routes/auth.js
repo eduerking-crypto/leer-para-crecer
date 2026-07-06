@@ -3,14 +3,18 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import db from '../database.js';
 import { generateToken, authMiddleware } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const avatarsDir = join(__dirname, '..', '..', 'public', 'uploads', 'avatars');
+if (!existsSync(avatarsDir)) mkdirSync(avatarsDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, join(__dirname, '..', '..', 'public', 'uploads', 'avatars')),
+  destination: (req, file, cb) => cb(null, avatarsDir),
   filename: (req, file, cb) => cb(null, `user-${req.user.id}-${Date.now()}${file.originalname.match(/\.[^.]+$/)?.[0]||'.jpg'}`)
 });
 const upload = multer({ storage, limits: { fileSize: 2 * 1024 * 1024 }, fileFilter: (req, file, cb) => file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Solo imágenes')) });

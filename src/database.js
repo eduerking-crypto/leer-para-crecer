@@ -1,15 +1,24 @@
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdirSync, existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..', 'data');
-const db = new DatabaseSync(join(DATA_DIR, 'app.db'));
+if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
-db.exec('PRAGMA journal_mode = WAL');
-db.exec('PRAGMA foreign_keys = ON');
+let db;
+try {
+  db = new DatabaseSync(join(DATA_DIR, 'app.db'));
+} catch (e) {
+  console.error('Error al abrir la base de datos:', e.message);
+  process.exit(1);
+}
+
+try { db.exec('PRAGMA journal_mode = WAL'); } catch (e) { /* WAL no disponible en algunos entornos */ }
+try { db.exec('PRAGMA foreign_keys = ON'); } catch (e) { /* ignorar */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
