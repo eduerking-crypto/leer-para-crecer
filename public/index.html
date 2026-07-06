@@ -179,9 +179,9 @@
 <section id="page-games" class="hidden">
 <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 <div class="flex flex-wrap gap-3 mb-6">
-  <button onclick="showGame('memory')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-emerald-700 text-white">Memoria</button>
-  <button onclick="showGame('quiz')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Quiz</button>
-  <button onclick="showGame('challenge')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Reto 12</button>
+  <button onclick="showGame('memory', this)" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-emerald-700 text-white">Memoria</button>
+  <button onclick="showGame('quiz', this)" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Quiz</button>
+  <button onclick="showGame('challenge', this)" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Reto 12</button>
 </div>
 <div id="game-memory" class="block">
   <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
@@ -195,7 +195,7 @@
     <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800">Quiz Literario</h3><span class="text-sm font-bold text-emerald-700">Puntos: <span id="quiz-score">0</span></span></div>
     <div id="quiz-question" class="text-lg font-medium mb-4"></div>
     <div id="quiz-options" class="space-y-2"></div>
-    <div class="flex gap-2 mt-4"><button onclick="nextQuiz()" class="bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm hover:bg-emerald-800 hidden" id="quiz-next-btn">Siguiente</button><button onclick="startQuiz()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-sm hover:bg-gray-300" id="quiz-restart-btn">Reiniciar</button></div>
+    <div class="flex gap-2 mt-4"><button class="bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm hover:bg-emerald-800 hidden" id="quiz-next-btn">Siguiente</button><button onclick="startQuiz()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-sm hover:bg-gray-300" id="quiz-restart-btn">Reiniciar</button></div>
   </div>
 </div>
 <div id="game-challenge" class="hidden">
@@ -370,8 +370,9 @@ function nav(section){
   else if(section==='library') loadBooks();
   else if(section==='freebooks') loadFreeBooks();
   else if(section==='forums') loadForums();
-  else if(section==='events') loadEvents();
-  else if(section==='profile') loadProfile();
+   else if(section==='games') loadGames();
+   else if(section==='events') loadEvents();
+   else if(section==='profile') loadProfile();
 }
 
 async function login(e){
@@ -685,6 +686,12 @@ async function addToReadingList(bookId){
   try { await api(`/books/${bookId}/read`,{method:'POST'}); toast('Agregado a tu lista') } catch(e){ toast(e.message,'error') }
 }
 
+function loadGames(){
+  startMemory();
+  startQuiz();
+  loadChallenge();
+}
+
 function startMemory(){
   const grid = $('memory-grid'); flippedCards = []; matchedPairs = 0; $('memory-pairs').textContent = '0';
   const emojis = ['🐶','🐱','🐼','🐨','🦁','🐸','🦊','🐰'];
@@ -706,11 +713,11 @@ function checkMatch(){
   flippedCards = [];
 }
 
-function showGame(game){
+function showGame(game, el){
   document.querySelectorAll('[id^="game-"]').forEach(g=>g.classList.add('hidden'));
   $('game-'+game).classList.remove('hidden');
   document.querySelectorAll('#page-games .tab-btn').forEach(b=>{b.classList.remove('bg-emerald-700','text-white');b.classList.add('bg-gray-200','text-gray-700')});
-  event.target.classList.add('bg-emerald-700','text-white');
+  if(el) el.classList.add('bg-emerald-700','text-white');
   if(game==='memory') startMemory();
   else if(game==='quiz') startQuiz();
   else if(game==='challenge') loadChallenge();
