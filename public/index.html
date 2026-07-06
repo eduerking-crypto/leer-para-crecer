@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leer para Crecer - Plataforma de Lectura</title>
+<meta name="description" content="Plataforma para adultos que quieren seguir creciendo a través de la lectura, el diálogo y el aprendizaje.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{scroll-behavior:smooth}
+.hero-bg{background:linear-gradient(135deg,#166534 0%,#1e40af 100%)}
+.card-hover{transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+.card-hover:hover{transform:translateY(-4px);box-shadow:0 12px 20px -8px rgba(0,0,0,0.12)}
+.nav-link{position:relative;cursor:pointer}
+.nav-link:after{content:'';position:absolute;width:0;height:2px;bottom:-2px;left:0;background-color:#4ade80;transition:width .3s ease}
+.nav-link:hover:after,.nav-link.active:after{width:100%}
+.nav-link.active{color:#166534}
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+.modal-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)}
+.memory-card{aspect-ratio:1;cursor:pointer;perspective:800px}
+.memory-card-inner{width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d;position:relative}
+.memory-card.flipped .memory-card-inner,.memory-card.matched .memory-card-inner{transform:rotateY(180deg)}
+.memory-card-front,.memory-card-back{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-size:2rem}
+.memory-card-front{background:linear-gradient(135deg,#166534,#1e40af);color:white}
+.memory-card-back{background:white;transform:rotateY(180deg);border:2px solid #e5e7eb;font-size:.8rem;padding:8px;text-align:center}
+.memory-card.matched .memory-card-back{border-color:#22c55e;background:#f0fdf4}
+.memory-card.disabled{pointer-events:none}
+.quiz-option{transition:all .3s ease;cursor:pointer}
+.quiz-option:hover{background:#f0fdf4;border-color:#4ade80}
+.quiz-option.correct{background:#dcfce7;border-color:#22c55e!important}
+.quiz-option.wrong{background:#fce4ec;border-color:#ef4444!important}
+.quiz-option.disabled{pointer-events:none}
+#reader-content{line-height:1.8;font-size:1.05rem;text-align:justify}
+#reader-content{font-family:Georgia,'Times New Roman',serif;font-weight:500;letter-spacing:.01em;line-height:1.9;color:#2d2d2d}
+#reader-content p{margin-bottom:1.2rem;font-weight:500}
+#reader-content h2,#reader-content h3{margin-top:1.5rem;margin-bottom:.8rem;font-weight:800}
+.reader-container{background:#faf3e8;max-width:800px;margin:0 auto;padding:2.5rem 3rem;border-radius:0;min-height:400px}
+@media(max-width:768px){.reader-container{padding:1.2rem 1.5rem}}
+.spinner{border:3px solid #e5e7eb;border-top:3px solid #166534;border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tab-btn{transition:all .2s ease}
+.tab-btn.active{background:#166534;color:white}
+.tab-btn.active:hover{background:#14532d}
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:14px 24px;border-radius:12px;color:white;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.2);transform:translateY(120px);opacity:0;transition:all .4s ease}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#166534}
+.toast.error{background:#dc2626}
+.toast.info{background:#1e40af}
+.free-book-card{transition:all .3s ease}
+.free-book-card:hover{transform:translateY(-6px);box-shadow:0 16px 28px -8px rgba(0,0,0,0.15)}
+.reader-container{background:#faf3e8;max-width:800px;margin:0 auto;padding:2.5rem 3rem;min-height:400px}
+@media(max-width:768px){.reader-container{padding:1.2rem 1.5rem}}
+.escudo-shield{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e5e7eb;background:#f9fafb}
+@media(max-width:768px){.reader-container{padding:1rem}}
+.book-cover{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px}
+.forum-post{border-left:3px solid #166534}
+#reader-modal.dark #reader-scroll{background:#1a1a2e}
+#reader-modal.dark .reader-container{background:#1a1a2e}
+#reader-modal.dark .border-b{background:#16213e!important;border-color:#2a2a4a!important}
+#reader-modal.dark #reader-content{color:#d4d4d8!important}
+#reader-modal.dark .text-gray-500{color:#94a3b8!important}
+#reader-modal.dark .hover\\:bg-gray-100:hover{background:#2a2a4a!important}
+#reader-modal.dark #reader-content h2,#reader-modal.dark #reader-content h3{color:#4ade80!important}
+</style>
+</head>
+<body class="bg-slate-50 font-sans">
+
+<nav class="bg-white shadow-md sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-4 sm:px-6">
+<div class="flex justify-between items-center h-16">
+  <div class="flex items-center gap-2 sm:gap-3 cursor-pointer" onclick="nav('home')">
+    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-600 to-violet-600 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl font-bold">📖</div>
+    <div class="hidden sm:block"><span class="text-xl sm:text-2xl font-bold text-emerald-800">Leer</span> <span class="text-xl sm:text-2xl font-bold text-violet-600">para Crecer</span></div>
+    <div class="sm:hidden text-lg font-bold text-emerald-800">LPC</div>
+  </div>
+  <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+    <a onclick="nav('home')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-home">Inicio</a>
+    <a onclick="nav('library')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-library">Biblioteca</a>
+    <a onclick="nav('freebooks')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-freebooks">Gratuitos</a>
+    <a onclick="nav('forums')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-forums">Foros</a>
+    <a onclick="nav('games')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-games">Juegos</a>
+    <a onclick="nav('events')" class="nav-link text-gray-700 hover:text-emerald-700" id="nav-events">Eventos</a>
+  </div>
+  <div class="flex items-center gap-2 sm:gap-3">
+    <div id="auth-buttons">
+      <button onclick="showModal('login')" class="text-sm font-medium text-emerald-700 hover:text-emerald-800 px-3 py-1.5">Ingresar</button>
+      <button onclick="showModal('register')" class="text-sm font-medium bg-emerald-700 text-white px-4 py-1.5 rounded-lg hover:bg-emerald-800">Registro</button>
+    </div>
+    <div id="user-menu" class="hidden items-center gap-3 cursor-pointer" onclick="nav('profile')">
+      <span id="user-avatar-display" class="text-xl"></span>
+      <span id="user-name-display" class="text-sm font-medium text-gray-700 hidden sm:inline"></span>
+      <span id="admin-badge" class="hidden text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">ADMIN</span>
+    </div>
+    <button class="md:hidden text-gray-600 text-xl" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+  </div>
+</div>
+<div id="mobile-menu" class="hidden md:hidden border-t pb-3 pt-2 px-2 flex flex-col gap-1">
+  <a onclick="nav('home')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Inicio</a>
+  <a onclick="nav('library')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Biblioteca</a>
+  <a onclick="nav('freebooks')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Gratuitos</a>
+  <a onclick="nav('forums')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Foros</a>
+  <a onclick="nav('games')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Juegos</a>
+  <a onclick="nav('events')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Eventos</a>
+  <a onclick="nav('profile')" class="px-3 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium">Mi Perfil</a>
+</div>
+</div>
+</nav>
+
+<main class="min-h-screen">
+
+<section id="page-home" class="block">
+<div class="hero-bg text-white">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+  <div class="max-w-3xl">
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4">Lee, Crece, <span class="text-emerald-300">Comparte</span></h1>
+    <p class="text-lg sm:text-xl text-emerald-100 mb-8">Una plataforma para adultos que quieren seguir creciendo a través de la lectura, el diálogo y el aprendizaje divertido.</p>
+    <div class="flex flex-wrap gap-3">
+      <button onclick="nav('freebooks')" class="bg-white text-emerald-800 px-6 py-3 rounded-xl font-semibold hover:bg-emerald-50"><i class="fas fa-book-open mr-2"></i>Leer Gratis</button>
+      <button onclick="nav('library')" class="border-2 border-white/30 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/10"><i class="fas fa-search mr-2"></i>Explorar</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+  <div class="bg-white rounded-2xl p-6 text-center shadow-sm card-hover"><div class="text-4xl mb-2">📚</div><div class="text-2xl font-bold text-gray-800" id="stat-books">20</div><div class="text-sm text-gray-500">Libros</div></div>
+  <div class="bg-white rounded-2xl p-6 text-center shadow-sm card-hover"><div class="text-4xl mb-2">📖</div><div class="text-2xl font-bold text-gray-800" id="stat-freebooks">20</div><div class="text-sm text-gray-500">Gratuitos</div></div>
+  <div class="bg-white rounded-2xl p-6 text-center shadow-sm card-hover"><div class="text-4xl mb-2">💬</div><div class="text-2xl font-bold text-gray-800" id="stat-forums">6</div><div class="text-sm text-gray-500">Foros</div></div>
+  <div class="bg-white rounded-2xl p-6 text-center shadow-sm card-hover"><div class="text-4xl mb-2">🎮</div><div class="text-2xl font-bold text-gray-800" id="stat-games">3</div><div class="text-sm text-gray-500">Juegos</div></div>
+</div>
+</div>
+
+<div class="bg-white py-12">
+<div class="max-w-7xl mx-auto px-4 sm:px-6">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Libros Gratuitos Destacados</h2>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="home-freebooks"></div>
+  <div class="text-center mt-6"><button onclick="nav('freebooks')" class="text-emerald-700 font-medium hover:text-emerald-800">Ver todos <i class="fas fa-arrow-right ml-1"></i></button></div>
+</div>
+</div>
+</section>
+
+<section id="page-library" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-book mr-2 text-emerald-600"></i>Biblioteca</h2>
+  <div class="flex gap-2 w-full sm:w-auto">
+    <select id="book-genre-filter" onchange="loadBooks()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+    <input id="book-search" placeholder="Buscar..." oninput="loadBooks()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 sm:w-48">
+  </div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="books-grid"></div>
+</div>
+</section>
+
+<section id="page-freebooks" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <div><h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-book-open mr-2 text-emerald-600"></i>Biblioteca Gratuita</h2><p class="text-sm text-gray-500 mt-1">Clásicos de la literatura universal. Dominio público.</p></div>
+  <div class="flex gap-2 w-full sm:w-auto">
+    <select id="free-genre-filter" onchange="loadFreeBooks()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+    <input id="free-search" placeholder="Buscar..." oninput="loadFreeBooks()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 sm:w-48">
+  </div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="freebooks-grid"></div>
+</div>
+</section>
+
+<section id="page-forums" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-comments mr-2 text-emerald-600"></i>Foros</h2></div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="forums-grid"></div>
+<div id="forum-detail" class="hidden mt-8"><button onclick="backToForums()" class="text-emerald-700 mb-4 block"><i class="fas fa-arrow-left mr-1"></i>Volver</button><h3 id="forum-title" class="text-xl font-bold mb-4"></h3><div id="forum-posts" class="space-y-4 mb-6"></div><div id="forum-post-form"><textarea id="post-content" rows="3" class="w-full border border-gray-300 rounded-lg p-3 text-sm" placeholder="Escribe tu comentario..."></textarea><button onclick="createPost()" class="mt-2 bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-800">Publicar</button></div></div>
+</div>
+</section>
+
+<section id="page-games" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<div class="flex flex-wrap gap-3 mb-6">
+  <button onclick="showGame('memory')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-emerald-700 text-white">Memoria</button>
+  <button onclick="showGame('quiz')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Quiz</button>
+  <button onclick="showGame('challenge')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Reto 12</button>
+</div>
+<div id="game-memory" class="block">
+  <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800">Juego de Memoria</h3><span class="text-sm font-bold text-emerald-700">Pares: <span id="memory-pairs">0</span></span></div>
+    <div class="grid grid-cols-4 gap-2 sm:gap-3 max-w-md mx-auto" id="memory-grid"></div>
+    <div class="text-center mt-4"><button onclick="startMemory()" class="bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm hover:bg-emerald-800">Nuevo Juego</button></div>
+  </div>
+</div>
+<div id="game-quiz" class="hidden">
+  <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800">Quiz Literario</h3><span class="text-sm font-bold text-emerald-700">Puntos: <span id="quiz-score">0</span></span></div>
+    <div id="quiz-question" class="text-lg font-medium mb-4"></div>
+    <div id="quiz-options" class="space-y-2"></div>
+    <div class="flex gap-2 mt-4"><button onclick="nextQuiz()" class="bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm hover:bg-emerald-800 hidden" id="quiz-next-btn">Siguiente</button><button onclick="startQuiz()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-sm hover:bg-gray-300" id="quiz-restart-btn">Reiniciar</button></div>
+  </div>
+</div>
+<div id="game-challenge" class="hidden">
+  <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Reto: 12 Libros en 12 Meses</h3>
+    <p class="text-gray-600 text-sm mb-6">Completa tu reto de lectura mensual. Cada mes un nuevo libro, una nueva aventura.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="challenge-grid"></div>
+    <div class="text-center mt-6">
+      <button onclick="resetChallenge()" class="text-sm text-gray-500 hover:text-red-600"><i class="fas fa-trash mr-1"></i>Reiniciar reto</button>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="page-events" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<h2 class="text-2xl font-bold text-gray-800 mb-6"><i class="fas fa-calendar mr-2 text-emerald-600"></i>Próximos Eventos</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="events-grid"></div>
+</div>
+</section>
+
+<section id="page-profile" class="hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+<div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8" id="profile-content">
+  <div class="flex flex-col sm:flex-row gap-6 items-start">
+    <div class="flex-shrink-0 text-center sm:text-left">
+      <div id="profile-avatar-container" class="relative inline-block">
+        <div id="profile-avatar" class="text-6xl block mb-2"></div>
+        <div id="profile-escudo-container" class="hidden absolute -bottom-2 -right-2"><img src="https://upload.wikimedia.org/wikipedia/commons/d/d6/Escudo_Unicartagena.png" alt="Unicartagena" class="escudo-shield" onerror="this.style.display='none'"></div>
+      </div>
+      <div class="mt-2"><span id="profile-admin-badge" class="hidden text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">ADMIN</span></div>
+    </div>
+    <div class="flex-1 w-full">
+      <h2 id="profile-name" class="text-2xl font-bold text-gray-800"></h2>
+      <div class="flex items-center gap-2 mt-1"><span class="text-sm text-gray-500"><i class="fas fa-envelope mr-1"></i><span id="profile-email"></span></span></div>
+      <div class="flex items-center gap-4 mt-2 text-sm text-gray-500"><span><i class="fas fa-star mr-1 text-amber-500"></i>Nivel <span id="profile-level"></span></span><span><i class="fas fa-book mr-1 text-emerald-600"></i><span id="profile-books-read"></span> leídos</span></div>
+      <p id="profile-bio" class="mt-3 text-gray-600 text-sm italic"></p>
+      <div id="profile-uni-badge" class="hidden mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2"><img src="https://upload.wikimedia.org/wikipedia/commons/d/d6/Escudo_Unicartagena.png" alt="Unicartagena" class="w-8 h-8" onerror="this.style.display='none'"><div><span class="text-sm font-bold text-amber-800">Universidad de Cartagena</span><br><span class="text-xs text-amber-600">Biología</span></div></div>
+    </div>
+    <div class="flex-shrink-0"><button onclick="showEditProfile()" class="bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm hover:bg-emerald-800"><i class="fas fa-edit mr-1"></i>Editar</button></div>
+  </div>
+  <hr class="my-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <div><h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-bookmark mr-1 text-emerald-600"></i>Mi Lista</h3><div id="profile-reading-list" class="space-y-2 text-sm"></div></div>
+    <div><h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-trophy mr-1 text-amber-600"></i>Logros</h3><div id="profile-games" class="space-y-2 text-sm"></div></div>
+  </div>
+</div>
+</div>
+</section>
+
+</main>
+
+<footer class="bg-gray-900 text-gray-400 py-8 mt-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+  <div>© 2026 Leer para Crecer — Plataforma de Lectura para Adultos</div>
+  <div class="flex items-center gap-4">
+    <span class="hover:text-white cursor-pointer" onclick="nav('home')">Inicio</span>
+    <span class="hover:text-white cursor-pointer" onclick="nav('freebooks')">Gratuitos</span>
+    <span class="hover:text-white cursor-pointer" onclick="nav('forums')">Foros</span>
+    <select onchange="siteTranslate(this.value)" class="bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 text-xs"><option value="">🌐 Idioma</option><option value="es">Español</option><option value="en">English</option><option value="fr">Français</option><option value="pt">Português</option><option value="it">Italiano</option><option value="de">Deutsch</option><option value="ja">日本語</option><option value="zh-CN">中文</option></select>
+  </div>
+</div>
+</footer>
+
+<div id="modal-overlay" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4" onclick="if(event.target===this)hideModal()">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="flex justify-between items-center p-4 sm:p-6 border-b"><h3 id="modal-title" class="text-xl font-bold text-gray-800"></h3><button onclick="hideModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div>
+  <div id="modal-body" class="p-4 sm:p-6"></div>
+</div>
+</div>
+
+<div id="reader-modal" class="fixed inset-0 bg-white z-50 hidden flex flex-col">
+<div class="flex justify-between items-center px-4 sm:px-6 py-2.5 border-b bg-white shadow-sm">
+  <div class="flex-1 min-w-0"><h3 id="reader-title" class="font-bold text-gray-800 truncate"></h3><span id="reader-author" class="text-sm text-gray-500"></span></div>
+  <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+    <div class="hidden sm:flex items-center gap-1 mr-2 border-r pr-3">
+      <button onclick="readerFontSize(-1)" class="p-1.5 rounded hover:bg-gray-100 text-sm font-bold" title="Reducir">A-</button>
+      <span id="reader-font-size" class="text-xs text-gray-500 w-8 text-center">1.0</span>
+      <button onclick="readerFontSize(1)" class="p-1.5 rounded hover:bg-gray-100 text-sm font-bold" title="Aumentar">A+</button>
+    </div>
+    <button onclick="readerDarkMode()" id="reader-dark-btn" class="p-2 rounded hover:bg-gray-100 text-sm" title="Modo oscuro"><i class="fas fa-moon"></i></button>
+    <span id="reader-progress" class="text-xs text-gray-400 hidden sm:inline mr-1">0%</span>
+    <select id="reader-lang-select" onchange="readerTranslate(this.value)" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-gray-700" title="Traducir"><option value="">🌐 Traducir</option><option value="es">Español</option><option value="en">Inglés</option><option value="fr">Francés</option><option value="pt">Portugués</option><option value="it">Italiano</option><option value="de">Alemán</option><option value="ja">Japonés</option><option value="zh-CN">Chino</option></select>
+    <button onclick="openOriginalReader()" class="text-sm text-emerald-700 hover:text-emerald-800 px-3 py-1.5 border border-emerald-300 rounded-lg hidden sm:inline-block"><i class="fas fa-external-link-alt mr-1"></i>Original</button>
+    <button onclick="closeReader()" class="text-gray-400 hover:text-gray-600 text-2xl ml-1">&times;</button>
+  </div>
+</div>
+<div id="reader-scroll" class="flex-1 overflow-y-auto" onscroll="readerOnScroll()">
+  <div class="reader-container">
+    <div id="reader-content" class="text-gray-800 leading-relaxed" style="font-size:1rem"></div>
+    <div id="reader-loading" class="flex justify-center py-12"><div class="spinner"></div></div>
+  </div>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('lpc_token') || null;
+let currentUser = null;
+let currentForumId = null;
+let memoryCards = [];
+let flippedCards = [];
+let matchedPairs = 0;
+let quizIndex = 0;
+let quizScore = 0;
+let currentReaderBook = null;
+
+const quizData = [
+  { q: '¿Quién escribió "Cien Años de Soledad"?', o: ['Gabriel García Márquez','Mario Vargas Llosa','Julio Cortázar','Pablo Neruda'], a: 0 },
+  { q: '¿En qué año se publicó "1984" de George Orwell?', o: ['1945','1949','1953','1939'], a: 1 },
+  { q: '¿Cuál es el libro más vendido de la historia?', o: ['El Quijote','La Biblia','El Principito','Harry Potter'], a: 1 },
+  { q: '¿Quién es el autor de "El Alquimista"?', o: ['Paulo Coelho','Gabriel García Márquez','Isabel Allende','Jorge Luis Borges'], a: 0 },
+  { q: '¿Qué significa "Sapiens"?', o: ['Sabio','Humano','Fuerte','Creativo'], a: 0 },
+  { q: '¿Cuántos hábitos describe James Clear en "Hábitos Atómicos"?', o: ['4','7','12','3'], a: 0 },
+  { q: '¿Quién escribió "El Principito"?', o: ['Saint-Exupéry','Victor Hugo','Émile Zola','Molière'], a: 0 },
+  { q: '¿Cuál es el género de "Drácula"?', o: ['Terror','Fantasía','Ciencia Ficción','Misterio'], a: 0 },
+];
+
+const challengeMonths = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function $(id){return document.getElementById(id)}
+
+async function api(path, opts={}){
+  const headers = {'Content-Type':'application/json'};
+  if(token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const res = await fetch(API+'/api'+path, {...opts,headers});
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error(e.error||`Error ${res.status}`)}
+    return await res.json();
+  } catch(e){ throw e; }
+}
+
+function toast(msg, type='success'){
+  const t = $('toast'); t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+function showModal(type, data=null){
+  const overlay = $('modal-overlay'); overlay.classList.remove('hidden'); const title = $('modal-title'); const body = $('modal-body');
+  if(type==='login'){
+    title.textContent = 'Iniciar Sesión';
+    body.innerHTML = `<form onsubmit="login(event)"><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label><input id="login-email" type="email" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label><input id="login-pass" type="password" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><button type="submit" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-800 mt-2">Ingresar</button><p class="text-sm text-gray-500 text-center mt-3">Demo: ana@email.com / demo123</p></div></form>`;
+  } else if(type==='register'){
+    title.textContent = 'Crear Cuenta';
+    body.innerHTML = `<form onsubmit="register(event)"><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input id="reg-name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label><input id="reg-email" type="email" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label><input id="reg-pass" type="password" minlength="4" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><button type="submit" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-800 mt-2">Crear Cuenta</button></div></form>`;
+  } else if(type==='book-detail' && data){
+    title.textContent = data.title;
+    body.innerHTML = `<div class="flex flex-col sm:flex-row gap-6"><img src="${data.image_url}" alt="${data.title}" class="w-40 rounded-lg shadow-sm self-center" onerror="this.src='https://picsum.photos/seed/default/400/500'"><div><p class="text-gray-600 text-sm">${data.author}</p><p class="text-gray-500 text-xs mt-1">${data.genre} · ${data.pages} pág · ${data.year}</p><div class="flex items-center gap-1 mt-2"><i class="fas fa-star text-amber-400 text-sm"></i><span class="text-sm font-bold">${data.rating}</span></div><p class="mt-4 text-gray-700 text-sm">${data.description||''}</p>${token?`<button onclick="addToReadingList(${data.id})" class="mt-4 bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm hover:bg-emerald-800"><i class="fas fa-check mr-1"></i>Marcar como Leído</button>`:'<p class="mt-4 text-xs text-gray-400">Inicia sesión para guardar en tu lista</p>'}</div></div>`;
+  } else if(type==='edit-profile' && data){
+    const isImg = data.avatar && data.avatar.startsWith('/');
+    title.textContent = 'Editar Perfil';
+    body.innerHTML = `<form onsubmit="saveProfile(event)"><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input id="edit-name" value="${data.name||''}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label><input id="edit-email" type="email" value="${data.email||''}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Foto de perfil</label><div class="flex items-center gap-3"><div id="edit-avatar-preview" class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl overflow-hidden">${isImg ? '<img src="'+data.avatar+'" class="w-full h-full object-cover">' : (data.avatar||'👤')}</div><input type="file" id="edit-avatar-file" accept="image/*" class="text-sm"></div><p class="text-xs text-gray-400 mt-1">O escribe un emoji: <input id="edit-avatar" value="${isImg?'👤':(data.avatar||'👤')}" class="border border-gray-300 rounded px-2 py-1 text-lg w-16 inline-block" maxlength="4"></p></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Biografía</label><textarea id="edit-bio" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">${data.bio||''}</textarea></div><button type="submit" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-800 mt-2">Guardar Cambios</button></div></form>`;
+  }
+}
+
+function hideModal(){ $('modal-overlay').classList.add('hidden') }
+
+function toggleMobileMenu(){ $('mobile-menu').classList.toggle('hidden') }
+
+function nav(section){
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+  const page = $('page-'+section);
+  if(page){ page.classList.remove('hidden'); page.classList.add('block'); }
+  const navEl = $('nav-'+section);
+  if(navEl) navEl.classList.add('active');
+  $('mobile-menu').classList.add('hidden');
+  if(section==='home') loadHome();
+  else if(section==='library') loadBooks();
+  else if(section==='freebooks') loadFreeBooks();
+  else if(section==='forums') loadForums();
+  else if(section==='events') loadEvents();
+  else if(section==='profile') loadProfile();
+}
+
+async function login(e){
+  e.preventDefault();
+  try {
+    const data = await api('/auth/login',{method:'POST',body:JSON.stringify({email:$('login-email').value,password:$('login-pass').value})});
+    token = data.token; currentUser = data.user;
+    localStorage.setItem('lpc_token', token);
+    hideModal(); updateAuthUI(); toast('¡Bienvenido '+data.user.name+'!'); nav('home');
+  } catch(e){ toast(e.message,'error') }
+}
+
+async function register(e){
+  e.preventDefault();
+  try {
+    const data = await api('/auth/register',{method:'POST',body:JSON.stringify({name:$('reg-name').value,email:$('reg-email').value,password:$('reg-pass').value})});
+    token = data.token; currentUser = data.user;
+    localStorage.setItem('lpc_token', token);
+    hideModal(); updateAuthUI(); toast('Cuenta creada con éxito'); nav('home');
+  } catch(e){ toast(e.message,'error') }
+}
+
+function logout(){
+  token = null; currentUser = null;
+  localStorage.removeItem('lpc_token');
+  updateAuthUI(); toast('Sesión cerrada','info'); nav('home');
+}
+
+function renderAvatar(container, avatar){
+  if(!avatar || avatar.startsWith('👤') || avatar.length<=2){ container.innerHTML = avatar||'👤'; container.className='text-xl' }
+  else { container.innerHTML = `<img src="${avatar}" class="w-8 h-8 rounded-full object-cover">`; container.className='' }
+}
+
+function renderAvatarLarge(container, avatar){
+  if(!avatar || avatar.startsWith('👤') || avatar.length<=2){ container.innerHTML = `<span class="text-6xl">${avatar||'👤'}</span>` }
+  else { container.innerHTML = `<img src="${avatar}" class="w-24 h-24 rounded-full object-cover mx-auto">` }
+}
+
+function updateAuthUI(){
+  if(token && currentUser){
+    $('auth-buttons').classList.add('hidden'); $('user-menu').classList.remove('hidden');
+    renderAvatar($('user-avatar-display'), currentUser.avatar);
+    $('user-name-display').textContent = currentUser.name||'';
+    if(currentUser.is_admin){ $('admin-badge').classList.remove('hidden') } else { $('admin-badge').classList.add('hidden') }
+  } else {
+    $('auth-buttons').classList.remove('hidden'); $('user-menu').classList.add('hidden');
+  }
+}
+
+async function loadHome(){
+  try {
+    const books = await api('/freebooks?limit=5');
+    const container = $('home-freebooks');
+    container.innerHTML = books.books.slice(0,5).map(b => `<div class="free-book-card bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer" onclick="openReader(${b.id})"><img src="${b.cover_url}" alt="${b.title}" class="book-cover" onerror="this.src='https://picsum.photos/seed/free/400/500'"><div class="p-2"><div class="text-xs font-semibold text-gray-800 truncate">${b.title}</div><div class="text-xs text-gray-500 truncate">${b.author}</div></div></div>`).join('');
+    $('stat-books').textContent = (await api('/books?limit=1')).total;
+    $('stat-freebooks').textContent = books.total;
+    $('stat-forums').textContent = (await api('/forums')).length;
+  } catch(e){ console.error(e) }
+}
+
+async function loadBooks(){
+  const genre = $('book-genre-filter').value;
+  const search = $('book-search').value;
+  try {
+    const data = await api(`/books?genre=${genre}&search=${encodeURIComponent(search)}&limit=50`);
+    const genres = await api('/books/genres');
+    $('book-genre-filter').innerHTML = '<option value="all">Todos</option>'+genres.map(g=>`<option value="${g}" ${g===genre?'selected':''}>${g}</option>`).join('');
+    $('books-grid').innerHTML = data.books.map(b => `<div class="bg-white rounded-xl overflow-hidden shadow-sm card-hover cursor-pointer" onclick="showModal('book-detail',${JSON.stringify(b).replace(/"/g,'&quot;')})"><img src="${b.image_url}" alt="${b.title}" class="book-cover" onerror="this.src='https://picsum.photos/seed/default/400/500'"><div class="p-3"><div class="text-sm font-semibold text-gray-800 truncate">${b.title}</div><div class="text-xs text-gray-500 truncate">${b.author}</div><div class="flex items-center gap-1 mt-1"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs font-bold">${b.rating}</span><span class="text-xs text-gray-400 ml-auto">${b.genre}</span></div></div></div>`).join('');
+  } catch(e){ toast('Error al cargar libros','error') }
+}
+
+async function loadFreeBooks(){
+  const genre = $('free-genre-filter').value;
+  const search = $('free-search').value;
+  try {
+    const data = await api(`/freebooks?genre=${genre}&search=${encodeURIComponent(search)}&limit=50`);
+    const fb = data;
+    $('free-genre-filter').innerHTML = '<option value="all">Todos</option>'+(fb.genres||[]).map(g=>`<option value="${g}" ${g===genre?'selected':''}>${g}</option>`).join('');
+    $('freebooks-grid').innerHTML = fb.books.map(b => `<div class="free-book-card bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer" onclick="openReader(${b.id})"><img src="${b.cover_url}" alt="${b.title}" class="book-cover" onerror="this.src='https://picsum.photos/seed/free/400/500'"><div class="p-3"><div class="text-sm font-bold text-gray-800 truncate">${b.title}</div><div class="text-xs text-gray-500 truncate">${b.author}</div><div class="mt-1 flex gap-1"><span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">${b.genre}</span></div></div></div>`).join('');
+  } catch(e){ toast('Error al cargar libros gratuitos','error') }
+}
+
+async function openReader(bookId){
+  try {
+    const data = await api(`/freebooks`);
+    const book = data.books.find(b=>b.id===bookId);
+    if(!book) return toast('Libro no encontrado','error');
+    currentReaderBook = book;
+    readerOriginalHTML = ''; readerTranslatedLang = ''; $('reader-lang-select').value = '';
+    $('reader-title').textContent = book.title;
+    $('reader-author').textContent = book.author;
+    $('reader-modal').classList.remove('hidden');
+    $('reader-content').innerHTML = '';
+    $('reader-loading').classList.remove('hidden');
+    $('reader-progress').textContent = '0%';
+    const fsKey = 'lpc_fontsize'; const dmKey = 'lpc_darkmode';
+    const savedFs = localStorage.getItem(fsKey); const savedDm = localStorage.getItem(dmKey);
+    if(savedFs) $('reader-content').style.fontSize = savedFs+'rem';
+    $('reader-font-size').textContent = (parseFloat(savedFs||'1.0')).toFixed(1);
+    if(savedDm==='1'){ document.getElementById('reader-modal').classList.add('dark'); $('reader-content').classList.add('text-gray-200'); $('reader-content').classList.remove('text-gray-800'); $('reader-dark-btn').innerHTML='<i class="fas fa-sun"></i>' }
+    if(book.text_url){
+      try {
+        const textResp = await fetch(`/api/freebooks/proxy/text?url=${encodeURIComponent(book.text_url)}`);
+        if(!textResp.ok) throw new Error('Texto no disponible');
+        const text = await textResp.text();
+        $('reader-loading').classList.add('hidden');
+        const parsed = parseBookText(text);
+        $('reader-content').innerHTML = parsed;
+        const savedPos = localStorage.getItem('lpc_pos_'+book.id);
+        if(savedPos){ setTimeout(()=>{ $('reader-scroll').scrollTop = parseInt(savedPos) },100) }
+      } catch(e2){
+        $('reader-loading').classList.add('hidden');
+        $('reader-content').innerHTML = `<div class="text-center py-8"><p class="text-gray-500">Vista previa no disponible.</p><a href="${book.text_url}" target="_blank" class="text-emerald-700 font-medium mt-2 inline-block">Leer en Gutenberg <i class="fas fa-external-link-alt ml-1"></i></a></div>`;
+      }
+    } else {
+      $('reader-loading').classList.add('hidden');
+      $('reader-content').innerHTML = `<div class="text-center py-8"><a href="${book.read_url}" target="_blank" class="text-emerald-700 font-medium">Abrir en Gutenberg <i class="fas fa-external-link-alt ml-1"></i></a></div>`;
+    }
+  } catch(e){ toast('Error al abrir libro','error'); closeReader() }
+}
+
+function parseBookText(text){
+  const lines = text.split('\n');
+  const startIdx = lines.findIndex(l=>l.match(/\*\*\* START|^CHAPTER|^Capítulo|^I\b|^PRÓLOGO|^INTRODUCCIÓN|^\d+\.\s/) );
+  const endIdx = lines.findIndex(l=>l.match(/\*\*\* END|End of Project Gutenberg|Fin del Project Gutenberg/) );
+  const content = lines.slice(startIdx>0?startIdx:20, endIdx>0?endIdx:lines.length-20);
+  let html = '';
+  let inChapter = false;
+  for(const line of content){
+    const t = line.trim();
+    if(!t){ html += '<p class="mb-4"></p>'; continue }
+    if(t.match(/^(CHAPTER|Capítulo|PRÓLOGO|INTRODUCCIÓN|EPÍLOGO|APÉNDICE|Parte|SECCIÓN)\s/i)||t.match(/^[IVXLCDM]+\.[\s]/)||t.match(/^\d+\.\s+[A-Z]/)){
+      html += `<h2 class="text-xl font-bold mt-6 mb-3 text-emerald-800">${t}</h2>`; inChapter = true; continue
+    }
+    if(inChapter&&t===t.toUpperCase()&&t.length>3&&t.length<60){ html += `<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-700">${t}</h3>`; continue }
+    html += `<p class="mb-3">${t}</p>`; inChapter = false;
+  }
+  return html || content.slice(30,300).map(l=>`<p>${l.trim()}</p>`).join('');
+}
+
+function closeReader(){
+  if(currentReaderBook){
+    localStorage.setItem('lpc_pos_'+currentReaderBook.id, $('reader-scroll').scrollTop);
+  }
+  $('reader-modal').classList.add('hidden'); currentReaderBook = null;
+}
+
+function openOriginalReader(){
+  if(currentReaderBook) window.open(currentReaderBook.read_url||currentReaderBook.text_url,'_blank');
+}
+
+function readerFontSize(delta){
+  const el = $('reader-content');
+  let cur = parseFloat(el.style.fontSize)||1;
+  cur = Math.max(0.7, Math.min(2.5, cur + delta*0.1));
+  el.style.fontSize = cur+'rem';
+  $('reader-font-size').textContent = cur.toFixed(1);
+  localStorage.setItem('lpc_fontsize', cur);
+}
+
+function readerDarkMode(){
+  const modal = document.getElementById('reader-modal');
+  const content = $('reader-content');
+  const btn = $('reader-dark-btn');
+  const isDark = modal.classList.toggle('dark');
+  if(isDark){
+    modal.style.background='#1a1a2e'; content.classList.add('text-gray-200'); content.classList.remove('text-gray-800');
+    content.style.background='transparent'; btn.innerHTML='<i class="fas fa-sun"></i>';
+    localStorage.setItem('lpc_darkmode','1');
+  } else {
+    modal.style.background=''; content.classList.remove('text-gray-200'); content.classList.add('text-gray-800');
+    content.style.background=''; btn.innerHTML='<i class="fas fa-moon"></i>';
+    localStorage.setItem('lpc_darkmode','0');
+  }
+}
+
+let readerOriginalHTML = '';
+let readerTranslatedLang = '';
+
+function readerTranslate(lang){
+  if(!lang) return;
+  const content = $('reader-content');
+  if(lang==='es' && readerTranslatedLang){
+    content.innerHTML = readerOriginalHTML || content.innerHTML;
+    readerTranslatedLang = ''; toast('Traducción revertida','info'); return;
+  }
+  if(!currentReaderBook){ toast('Abre un libro primero','error'); return }
+  const paragraphs = content.querySelectorAll('p');
+  const textToTranslate = Array.from(paragraphs).slice(0,30).map(p=>p.textContent).join('\n').slice(0,4000);
+  if(!textToTranslate.trim()) return toast('No hay texto para traducir','error');
+  if(!readerOriginalHTML) readerOriginalHTML = content.innerHTML;
+  toast('Traduciendo...','info');
+  fetch(`/api/freebooks/translate?text=${encodeURIComponent(textToTranslate)}&tl=${lang}`)
+    .then(r=>r.json()).then(data=>{
+      if(data.translated){
+        const lines = data.translated.split('\n');
+        const ps = content.querySelectorAll('p');
+        ps.forEach((p,i)=>{ if(lines[i]) p.textContent = lines[i] });
+        readerTranslatedLang = lang;
+        toast('Traducido a '+({en:'Inglés',fr:'Francés',pt:'Portugués',it:'Italiano',de:'Alemán',ja:'Japonés','zh-CN':'Chino'}[lang]||lang),'success');
+      } else { toast('Error al traducir','error') }
+    }).catch(()=>toast('Error de traducción','error'));
+}
+
+function readerOnScroll(){
+  const el = $('reader-scroll');
+  if(!el) return;
+  const pct = Math.round(100 * el.scrollTop / (el.scrollHeight - el.clientHeight));
+  $('reader-progress').textContent = Math.min(100, Math.max(0, pct))+'%';
+}
+
+async function loadForums(){
+  try {
+    const forums = await api('/forums');
+    $('forums-grid').innerHTML = forums.map(f => `<div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="openForum(${f.id},'${f.title}')"><div class="text-3xl mb-2">${f.icon||'📚'}</div><h3 class="font-bold text-gray-800">${f.title}</h3><p class="text-sm text-gray-500 mt-1">${f.description}</p><div class="flex gap-3 mt-3 text-xs text-gray-400"><span>👥 ${f.members}</span><span>💬 ${f.posts_count||0}</span></div></div>`).join('');
+  } catch(e){ toast('Error al cargar foros','error') }
+}
+
+async function openForum(id, title){
+  currentForumId = id;
+  $('forums-grid').classList.add('hidden');
+  $('forum-detail').classList.remove('hidden');
+  $('forum-title').textContent = title;
+  await loadForumPosts(id);
+}
+
+async function loadForumPosts(id){
+  try {
+    const posts = await api(`/forums/${id}/posts`);
+    $('forum-posts').innerHTML = posts.length ? posts.map(p => `<div class="forum-post bg-white rounded-lg p-4 shadow-sm"><div class="flex items-center gap-2 mb-2"><span class="text-lg">${p.user_avatar||'👤'}</span><span class="text-sm font-medium text-gray-800">${p.user_name}</span><span class="text-xs text-gray-400">${new Date(p.created_at).toLocaleDateString()}</span></div><p class="text-sm text-gray-700">${p.content}</p></div>`).join('') : '<p class="text-sm text-gray-400 text-center py-8">Sé el primero en comentar</p>';
+    if(!token) $('forum-post-form').innerHTML = '<p class="text-xs text-gray-400 mt-4">Inicia sesión para comentar</p>';
+    else $('forum-post-form').innerHTML = `<textarea id="post-content" rows="3" class="w-full border border-gray-300 rounded-lg p-3 text-sm" placeholder="Escribe tu comentario..."></textarea><button onclick="createPost()" class="mt-2 bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-800">Publicar</button>`;
+  } catch(e){ toast('Error al cargar posts','error') }
+}
+
+async function createPost(){
+  const content = $('post-content').value;
+  if(!content) return toast('Escribe algo','error');
+  try {
+    await api(`/forums/${currentForumId}/posts`,{method:'POST',body:JSON.stringify({content})});
+    $('post-content').value = ''; toast('Publicado'); loadForumPosts(currentForumId);
+  } catch(e){ toast(e.message,'error') }
+}
+
+function backToForums(){ $('forum-detail').classList.add('hidden'); $('forums-grid').classList.remove('hidden'); currentForumId=null }
+
+async function loadEvents(){
+  try {
+    const events = await api('/events');
+    const colors = {emerald:'bg-emerald-100 text-emerald-800',violet:'bg-violet-100 text-violet-800',amber:'bg-amber-100 text-amber-800',blue:'bg-blue-100 text-blue-800',rose:'bg-rose-100 text-rose-800'};
+    $('events-grid').innerHTML = events.map(e => `<div class="bg-white rounded-xl p-5 shadow-sm card-hover"><div class="flex items-start gap-4"><div class="text-center flex-shrink-0"><div class="text-lg font-bold text-gray-800">${new Date(e.event_date).getDate()}</div><div class="text-xs text-gray-500">${new Date(e.event_date).toLocaleString('es',{month:'short'})}</div></div><div><h3 class="font-bold text-gray-800">${e.title}</h3><span class="inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${colors[e.color]||'bg-gray-100 text-gray-700'}">${e.type}</span><p class="text-sm text-gray-600 mt-2">${e.description}</p></div></div></div>`).join('');
+  } catch(e){ toast('Error al cargar eventos','error') }
+}
+
+async function loadProfile(){
+  if(!token) return toast('Inicia sesión primero','error');
+  try {
+    const data = await api('/auth/me');
+    const u = data.user;
+    currentUser = u;
+    renderAvatarLarge($('profile-avatar'), u.avatar);
+    $('profile-name').textContent = u.name;
+    $('profile-email').textContent = u.email;
+    $('profile-level').textContent = u.level||1;
+    $('profile-books-read').textContent = data.stats?.booksRead||0;
+    $('profile-bio').textContent = u.bio||'Sin biografía aún.';
+    if(u.is_admin){
+      $('profile-admin-badge').classList.remove('hidden');
+      $('profile-escudo-container').classList.remove('hidden');
+      $('profile-uni-badge').classList.remove('hidden');
+    } else {
+      $('profile-admin-badge').classList.add('hidden');
+      $('profile-escudo-container').classList.add('hidden');
+      $('profile-uni-badge').classList.add('hidden');
+    }
+    if(data.stats?.games?.length){
+      $('profile-games').innerHTML = data.stats.games.map(g => `<div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2"><span class="text-gray-700">${g.game}</span><span class="font-bold text-emerald-700">${g.best} pts</span></div>`).join('');
+    } else { $('profile-games').innerHTML = '<p class="text-gray-400 text-sm">Aún no has jugado</p>' }
+    try {
+      const list = await api('/books/user/list');
+      $('profile-reading-list').innerHTML = list.length ? list.map(b => `<div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2"><span class="text-gray-700 truncate">${b.title}</span><span class="text-xs text-emerald-700">${b.status}</span></div>`).join('') : '<p class="text-gray-400 text-sm">Aún no has leído libros</p>';
+    } catch(e){ $('profile-reading-list').innerHTML = '<p class="text-gray-400 text-sm">Inicia sesión para ver tu lista</p>' }
+  } catch(e){ toast('Error al cargar perfil','error') }
+}
+
+function showEditProfile(){
+  if(!currentUser) return;
+  showModal('edit-profile', currentUser);
+}
+
+async function saveProfile(e){
+  e.preventDefault();
+  try {
+    const fileInput = $('edit-avatar-file');
+    let avatarVal = $('edit-avatar').value||'👤';
+    if(fileInput && fileInput.files[0]){
+      const fd = new FormData(); fd.append('avatar', fileInput.files[0]);
+      const headers = {}; if(token) headers.Authorization = `Bearer ${token}`;
+      const resp = await fetch(API+'/api/auth/upload-avatar', {method:'POST', headers, body: fd});
+      const d = await resp.json();
+      if(d.user) { avatarVal = d.user.avatar; currentUser = d.user; if(d.token) token = d.token; }
+    }
+    const data = await api('/auth/profile',{method:'PUT',body:JSON.stringify({name:$('edit-name').value,email:$('edit-email').value,avatar:avatarVal,bio:$('edit-bio').value})});
+    currentUser = data.user;
+    if(data.token) { token = data.token; localStorage.setItem('lpc_token', token); }
+    hideModal(); updateAuthUI(); toast('Perfil actualizado'); loadProfile();
+  } catch(e){ toast(e.message||'Error','error') }
+}
+
+async function addToReadingList(bookId){
+  try { await api(`/books/${bookId}/read`,{method:'POST'}); toast('Agregado a tu lista') } catch(e){ toast(e.message,'error') }
+}
+
+function startMemory(){
+  const grid = $('memory-grid'); flippedCards = []; matchedPairs = 0; $('memory-pairs').textContent = '0';
+  const emojis = ['🐶','🐱','🐼','🐨','🦁','🐸','🦊','🐰'];
+  memoryCards = [...emojis,...emojis].sort(()=>Math.random()-.5);
+  grid.innerHTML = memoryCards.map((e,i) => `<div class="memory-card" data-i="${i}" onclick="flipCard(this)"><div class="memory-card-inner"><div class="memory-card-front">?</div><div class="memory-card-back">${e}</div></div></div>`).join('');
+}
+
+function flipCard(el){
+  if(el.classList.contains('flipped')||el.classList.contains('matched')||flippedCards.length>=2) return;
+  el.classList.add('flipped'); flippedCards.push(el);
+  if(flippedCards.length===2) setTimeout(checkMatch,600);
+}
+
+function checkMatch(){
+  const [a,b] = flippedCards;
+  const match = memoryCards[a.dataset.i]===memoryCards[b.dataset.i];
+  if(match){ a.classList.add('matched'); b.classList.add('matched'); matchedPairs++; $('memory-pairs').textContent=matchedPairs; if(matchedPairs===8) saveScore('memory',100); }
+  else { a.classList.remove('flipped'); b.classList.remove('flipped') }
+  flippedCards = [];
+}
+
+function showGame(game){
+  document.querySelectorAll('[id^="game-"]').forEach(g=>g.classList.add('hidden'));
+  $('game-'+game).classList.remove('hidden');
+  document.querySelectorAll('#page-games .tab-btn').forEach(b=>{b.classList.remove('bg-emerald-700','text-white');b.classList.add('bg-gray-200','text-gray-700')});
+  event.target.classList.add('bg-emerald-700','text-white');
+  if(game==='memory') startMemory();
+  else if(game==='quiz') startQuiz();
+  else if(game==='challenge') loadChallenge();
+}
+
+function startQuiz(){
+  quizIndex = 0; quizScore = 0; $('quiz-score').textContent = '0'; $('quiz-next-btn').classList.add('hidden'); showQuizQuestion();
+}
+
+function showQuizQuestion(){
+  if(quizIndex>=quizData.length) return showQuizResult();
+  const q = quizData[quizIndex];
+  $('quiz-question').textContent = q.q;
+  $('quiz-options').innerHTML = q.o.map((opt,i) => `<div class="quiz-option border-2 border-gray-200 rounded-lg p-3 text-sm" data-i="${i}" onclick="answerQuiz(this,${i})">${opt}</div>`).join('');
+  $('quiz-next-btn').classList.add('hidden');
+}
+
+function answerQuiz(el, i){
+  const q = quizData[quizIndex]; const correct = i===q.a;
+  document.querySelectorAll('.quiz-option').forEach(o=>{o.classList.add('disabled'); if(parseInt(o.dataset.i)===q.a) o.classList.add('correct')});
+  if(!correct) el.classList.add('wrong'); else quizScore++;
+  $('quiz-score').textContent = quizScore;
+  $('quiz-next-btn').classList.remove('hidden'); $('quiz-next-btn').onclick = ()=>{quizIndex++;showQuizQuestion()};
+}
+
+function showQuizResult(){
+  $('quiz-question').textContent = '¡Quiz completado!'; const total = quizData.length;
+  $('quiz-options').innerHTML = `<div class="text-center py-4"><div class="text-4xl font-bold text-emerald-700">${quizScore}/${total}</div><p class="text-gray-500 mt-2">${quizScore===total?'¡Perfecto! Eres un experto':quizScore>=total/2?'Buen trabajo':'Sigue practicando'}</p></div>`;
+  $('quiz-next-btn').classList.add('hidden');
+  if(quizScore>0) saveScore('quiz',quizScore*10);
+}
+
+function loadChallenge(){
+  const saved = JSON.parse(localStorage.getItem('lpc_challenge')||'[]');
+  const months = challengeMonths;
+  $('challenge-grid').innerHTML = months.map((m,i) => {
+    const completed = saved.includes(i+1);
+    return `<div class="bg-white border-2 ${completed?'border-emerald-500 bg-emerald-50':'border-gray-200'} rounded-xl p-4 text-center cursor-pointer hover:shadow-md transition-all" onclick="toggleChallengeMonth(${i+1})"><div class="text-3xl mb-1">${completed?'✅':'📖'}</div><div class="text-sm font-medium ${completed?'text-emerald-800':'text-gray-700'}">${m}</div><div class="text-xs mt-1 ${completed?'text-emerald-600':'text-gray-400'}">${completed?'Completado':'Pendiente'}</div></div>`;
+  }).join('');
+}
+
+function toggleChallengeMonth(month){
+  let saved = JSON.parse(localStorage.getItem('lpc_challenge')||'[]');
+  if(saved.includes(month)) saved = saved.filter(m=>m!==month); else saved.push(month);
+  localStorage.setItem('lpc_challenge',JSON.stringify(saved));
+  if(saved.length===12) toast('¡Reto completado! Has leído 12 libros este año','success');
+  loadChallenge();
+}
+
+function resetChallenge(){
+  if(confirm('¿Reiniciar el reto de lectura?')){ localStorage.setItem('lpc_challenge','[]'); loadChallenge(); toast('Reto reiniciado','info') }
+}
+
+async function saveScore(game,score){
+  if(!token) return;
+  try { await api('/games/score',{method:'POST',body:JSON.stringify({game,score})}) } catch(e){}
+}
+
+function siteTranslate(lang){
+  if(!lang) return;
+  const url = window.location.href;
+  window.open(`https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encodeURIComponent(url)}`,'_blank');
+}
+
+// Init
+(async function(){
+  if(token){
+    try { const data = await api('/auth/me'); currentUser = data.user; updateAuthUI() } catch(e){ localStorage.removeItem('lpc_token'); token=null }
+  }
+  loadHome();
+  startMemory();
+  loadChallenge();
+  startQuiz();
+})();
+</script>
+</body>
+</html>

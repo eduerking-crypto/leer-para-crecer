@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: leer-para-crecer
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.0.0
+      - key: JWT_SECRET
+        value: leer-para-crecer-secret-2026
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1
